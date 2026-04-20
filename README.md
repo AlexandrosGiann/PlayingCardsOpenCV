@@ -77,10 +77,10 @@ project/
 ├── main.py
 └── templates/
     └── suit/
-        ├── spade.png
-        ├── heart.png
-        ├── diamond.png
-        └── club.png
+        ├── spade.jpg
+        ├── heart.jpg
+        ├── diamond.jpg
+        └── club.jpg
 
 ---
 
