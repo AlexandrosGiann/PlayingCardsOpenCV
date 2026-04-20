@@ -1,168 +1,190 @@
-# PlayingCardsOpenCV
-Playing Cards Suit Detection with OpenCV (Android / Pydroid 3)
+# 🂡 Playing Cards Detection with OpenCV
 
-Author: Alexandros Giannakis
-GitHub: https://github.com/AlexandrosGiann/PlayingCardsOpenCV
-
----
-
-📌 Overview
-
-This project implements a real-time playing card suit detection system using OpenCV and Tkinter. It is designed to run directly on an Android device using Pydroid 3 Premium, leveraging the device’s camera.
-
-The system detects a playing card in the camera feed, extracts the relevant region, isolates the suit symbol (♠ ♥ ♦ ♣), and classifies it using template matching techniques—without any machine learning.
+Real-time playing card recognition using classical computer vision techniques.
+The system detects both rank and suit from a live camera stream.
 
 ---
 
-🎯 Features
+## 📌 Overview
 
-- 📷 Real-time camera input (mobile device)
-- 🃏 Automatic card detection using contours
-- 🔄 Perspective correction (card alignment)
-- 🔍 Suit extraction from card corner
-- ⚫ Symbol isolation via contour filtering
-- 🧠 Template-based classification (no AI required)
-- 📊 Confidence scoring with thresholding
-- 🖥️ Live GUI using Tkinter
-- 💾 Snapshot saving
+This project implements a modular OpenCV pipeline for detecting playing cards and recognizing:
+- Suit → spade, heart, diamond, club
+- Rank → A, K, Q, J (extendable to full deck)
 
----
+The application is designed to run both:
 
-⚙️ How It Works
+- 📱 On Android via Pydroid 3
+- 💻 On Desktop (Linux / Windows)
 
-The pipeline consists of the following steps:
-
-1. Frame Capture
-   The camera continuously captures frames using OpenCV.
-
-2. Card Detection
-   The system detects the largest rectangular contour in the frame.
-
-3. Perspective Transform
-   The detected card is warped into a normalized top-down view.
-
-4. Corner Extraction
-   The top-left region of the card is cropped.
-
-5. Suit Region Isolation
-   A smaller region is extracted to avoid including the rank (number/letter).
-
-6. Preprocessing
-   
-   - Grayscale conversion
-   - Gaussian blur
-   - Binary thresholding or edge detection
-
-7. Symbol Isolation
-   
-   - Largest contour is extracted
-   - Noise and small artifacts are removed
-
-8. Template Matching
-   
-   - The processed symbol is compared against predefined templates
-   - A similarity score is computed using pixel-wise difference
-
-9. Prediction
-   
-   - The suit with the highest score is selected
-   - If the score is below a threshold → result is ""unknown""
+No deep learning is used — only contours, perspective transform, and template matching.
 
 ---
 
-📁 Project Structure
+## 🧱 Project Structure
 
-project/
+```
+PlayingCardsOpenCV/
 │
-├── main.py
-└── templates/
-    └── suit/
-        ├── spade.jpg
-        ├── heart.jpg
-        ├── diamond.jpg
-        └── club.jpg
+├── main.py                  # Entry point (Pydroid-compatible)
+├── config.py                # Global configuration
+│
+├── templates/
+│   ├── rank/                # Rank templates (JPG)
+│   │   ├── A.jpg
+│   │   ├── K.jpg
+│   │   ├── Q.jpg
+│   │   └── J.jpg
+│   │
+│   └── suit/                # Suit templates (JPG)
+│       ├── spade.jpg
+│       ├── heart.jpg
+│       ├── diamond.jpg
+│       └── club.jpg
+│
+└── src/
+    ├── __init__.py
+    ├── app.py               # GUI (Tkinter) + camera loop
+    ├── detector.py          # Core card detection pipeline
+    ├── image_utils.py       # Image preprocessing utilities
+    ├── roi_extractor.py     # Rank & suit region extraction
+    └── template_matcher.py  # Template loading & similarity matching
+```
 
 ---
 
-🚀 Installation
+## ⚙️ Configuration
 
-Requirements
+All runtime parameters are centralized in:
 
-- Python 3 (via Pydroid 3 Premium on Android)
-- OpenCV
-- NumPy
-- Pillow (for Tkinter image rendering)
+config.py
 
-Install dependencies
+Key parameters:
 
-pip install opencv-python numpy pillow
-
----
-
-▶️ Usage
-
-Run the application:
-
-python main.py
-
-Controls
-
-- Pause / Resume – Freeze the camera feed
-- Save Snapshot – Save the current processed frame
-- Exit – Close the application
-
----
-
-⚙️ Configuration
-
-You can tune the system by modifying these parameters in "main.py":
-
-CONFIDENCE_THRESHOLD = 0.45
+CAMERA_INDEX = 0
 THRESH_BINARY_VALUE = 170
 USE_CANNY = False
 
-Tips
+RANK_CONFIDENCE_THRESHOLD = 0.45
+SUIT_CONFIDENCE_THRESHOLD = 0.45
 
-- Increase "CONFIDENCE_THRESHOLD" to reduce false positives
-- Adjust "THRESH_BINARY_VALUE" depending on lighting
-- Enable "USE_CANNY = True" if thresholding fails
+MIN_CARD_AREA = 12000
+POLY_EPSILON_RATIO = 0.02
 
----
+These control:
 
-⚠️ Limitations
-
-- Works best with one card at a time
-- Requires good lighting conditions
-- Performance may vary depending on Android device and camera support
-- Tkinter + OpenCV on mobile may be less stable than desktop environments
+- detection sensitivity
+- binarization behavior
+- template matching thresholds
 
 ---
 
-🔮 Future Improvements
+## 🧠 Detection Pipeline
 
-- 🔢 Rank detection (A, 2–10, J, Q, K)
-- 🃏 Full card recognition (rank + suit)
-- 🎯 Multi-card detection
-- 🤖 Deep learning integration (optional)
-- ⚡ Performance optimization
+1. Contour Detection
+
+- Canny edge detection
+- External contours
+- Filter quadrilaterals by area
+
+2. Perspective Transform
+
+- Warp detected card to top-down view
+
+3. Corner Extraction
+
+- Extract top-left region
+- Split into:
+  - rank ROI
+  - suit ROI
+
+4. Preprocessing
+
+- Grayscale
+- Threshold or edge detection
+- Largest contour isolation
+
+5. Template Matching
+
+- Resize to fixed size
+- Pixel-wise difference
+- Similarity score (0–1)
 
 ---
 
-📜 License
+## 🖼️ Template Requirements
 
-This project is open-source and available for educational and personal use.
+All templates are JPG images.
+
+Constraints:
+
+- High contrast (black on white)
+- Same font/style as cards
+- Centered symbol
+- Minimal background noise
 
 ---
 
-## 🧪 Tested Environments
+## 🧪 Testing Environments
+Tested on 📱 Redmi Note 11 (Android 12, MIUI 13, Pydroid 3 Premium)
+---
 
-📱 Redmi Note 11 (Android 12, MIUI 13, Pydroid 3 Premium)
+## 🧪 Debug Output
+
+The application provides a debug panel:
+
+[Detected Rank]   [Best Rank Template]
+[Detected Suit]   [Best Suit Template]
+
+And console/UI output:
+
+K of heart | Rank: 0.80 Suit: 0.87
 
 ---
 
-👨‍💻 Author
+## ⚠️ Limitations
+
+- Detects only the largest card
+- Sensitive to:
+  - lighting conditions
+  - extreme rotations
+  - template mismatch
+- Rank detection less stable than suit detection
+
+---
+
+## 🔧 Troubleshooting
+
+Camera not opening
+
+Could not open camera
+
+➡ Change in "config.py":
+
+CAMERA_INDEX = 1
+
+---
+
+## Wrong detections
+
+- Adjust threshold:
+
+THRESH_BINARY_VALUE = 150–180
+
+- Improve templates (font match is critical)
+
+---
+
+## 🔮 Future Work
+
+- Multi-card detection
+- Full deck (2–10)
+- Temporal smoothing
+- Performance optimization (mobile)
+- Hybrid ML + CV approach
+
+---
+
+## 👤 Author
 
 Alexandros Giannakis
 GitHub: https://github.com/AlexandrosGiann/PlayingCardsOpenCV
-
----
