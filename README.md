@@ -9,7 +9,7 @@ The system detects both rank and suit from a live camera stream.
 
 This project implements a modular OpenCV pipeline for detecting playing cards and recognizing:
 - Suit → spade, heart, diamond, club
-- Rank → A, K, Q, J (extendable to full deck)
+- Rank → A, K, Q, J, 2–10 (full numeric support)
 
 The application is designed to run both:
 
@@ -26,14 +26,16 @@ No deep learning is used — only contours, perspective transform, and template 
 PlayingCardsOpenCV/
 │
 ├── main.py                  # Entry point (Pydroid-compatible)
-├── config.py                # Global configuration
+├── config.py                # Global configuration & thresholds
+├── char2img.py              # Utility script (optional: generate templates)
 │
 ├── templates/
 │   ├── rank/                # Rank templates (JPG)
 │   │   ├── A.jpg
 │   │   ├── K.jpg
 │   │   ├── Q.jpg
-│   │   └── J.jpg
+│   │   ├── J.jpg
+│   │   ├── 2.jpg ... 10.jpg
 │   │
 │   └── suit/                # Suit templates (JPG)
 │       ├── spade.jpg
@@ -43,13 +45,34 @@ PlayingCardsOpenCV/
 │
 └── src/
     ├── __init__.py
-    ├── app.py               # GUI (Tkinter) + camera loop
-    ├── detector.py          # Core card detection pipeline
-    ├── image_utils.py       # Image preprocessing utilities
-    ├── roi_extractor.py     # Rank & suit region extraction
-    └── template_matcher.py  # Template loading & similarity matching
+    │
+    ├── app.py               # Tkinter GUI + camera loop
+    │
+    ├── detector.py          # Core detection pipeline
+    │   ├── contour detection
+    │   ├── perspective transform
+    │   └── rank/suit classification
+    │
+    ├── image_utils.py       # Image processing
+    │   ├── preprocessing (threshold / canny)
+    │   ├── isolate_main_symbol()
+    │   └── isolate_rank_symbol()  # multi-contour support (e.g. "10")
+    │
+    ├── roi_extractor.py     # Region extraction
+    │   ├── card corner extraction
+    │   ├── rank ROI
+    │   └── suit ROI
+    │
+    └── template_matcher.py  # Template handling
+        ├── load_templates()
+        ├── preprocess_template()
+        └── match_symbol()
 ```
+Note:
+Rank preprocessing differs from suit preprocessing.
 
+Ranks support multi-contour symbols (e.g. "10") by merging all valid contours
+into a single bounding region before template matching.
 ---
 
 ## ⚙️ Configuration
@@ -177,7 +200,7 @@ THRESH_BINARY_VALUE = 150–180
 ## 🔮 Future Work
 
 - Multi-card detection
-- Full deck (2–10)
+- Improve multi-character rank detection (e.g. "10")
 - Temporal smoothing
 - Performance optimization (mobile)
 - Hybrid ML + CV approach

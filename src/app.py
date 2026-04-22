@@ -21,9 +21,16 @@ class CardDetectorApp:
         self.root = root
         self.root.title("Playing Card Rank + Suit Detector")
 
-        self.suit_templates = load_templates(SUIT_TEMPLATE_FOLDER)
-        self.rank_templates = load_templates(RANK_TEMPLATE_FOLDER)
-
+        self.suit_templates = load_templates(
+            SUIT_TEMPLATE_FOLDER,
+            template_type="suit"
+        )
+        
+        self.rank_templates = load_templates(
+            RANK_TEMPLATE_FOLDER,
+            template_type="rank"
+        )
+        
         self.detector = CardDetector(
             rank_templates=self.rank_templates,
             suit_templates=self.suit_templates

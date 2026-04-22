@@ -46,7 +46,7 @@ def preprocess_binary_from_bgr(img_bgr, use_canny=False):
     return binary
 
 
-def isolate_main_symbol(binary_img):
+def _get_valid_contours(binary_img):
     contours, _ = cv2.findContours(
         binary_img,
         cv2.RETR_EXTERNAL,
@@ -54,16 +54,26 @@ def isolate_main_symbol(binary_img):
     )
 
     if not contours:
-        return safe_resize(binary_img, TEMPLATE_SIZE)
+        return []
 
-    valid_contours = []
     img_h, img_w = binary_img.shape[:2]
     min_area = (img_h * img_w) * 0.01
 
+    valid = []
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if area >= min_area:
-            valid_contours.append(cnt)
+            valid.append(cnt)
+
+    return valid
+
+
+def isolate_main_symbol(binary_img, symbol_size=70):
+    """
+    Για suits ή single-character ranks.
+    Κρατά μόνο το μεγαλύτερο contour.
+    """
+    valid_contours = _get_valid_contours(binary_img)
 
     if not valid_contours:
         return safe_resize(binary_img, TEMPLATE_SIZE)
@@ -77,7 +87,7 @@ def isolate_main_symbol(binary_img):
     cropped = binary_img[y:y + h, x:x + w]
 
     canvas = np.zeros((TEMPLATE_SIZE[1], TEMPLATE_SIZE[0]), dtype=np.uint8)
-    resized = safe_resize(cropped, (90, 90))
+    resized = safe_resize(cropped, (symbol_size, symbol_size))
 
     y_off = (TEMPLATE_SIZE[1] - resized.shape[0]) // 2
     x_off = (TEMPLATE_SIZE[0] - resized.shape[1]) // 2
@@ -86,9 +96,57 @@ def isolate_main_symbol(binary_img):
     return canvas
 
 
-def preprocess_symbol_roi(roi, use_canny=False):
+def isolate_rank_symbol(binary_img, symbol_width=70, symbol_height=70):
+    """
+    Για ranks. Υποστηρίζει και '10' ενώνοντας όλα τα σημαντικά contours
+    σε ένα κοινό bounding box.
+    """
+    valid_contours = _get_valid_contours(binary_img)
+
+    if not valid_contours:
+        return safe_resize(binary_img, TEMPLATE_SIZE)
+
+    xs, ys, xe, ye = [], [], [], []
+
+    for cnt in valid_contours:
+        x, y, w, h = cv2.boundingRect(cnt)
+        if w >= 5 and h >= 5:
+            xs.append(x)
+            ys.append(y)
+            xe.append(x + w)
+            ye.append(y + h)
+
+    if not xs:
+        return safe_resize(binary_img, TEMPLATE_SIZE)
+
+    x1, y1 = min(xs), min(ys)
+    x2, y2 = max(xe), max(ye)
+
+    cropped = binary_img[y1:y2, x1:x2]
+
+    canvas = np.zeros((TEMPLATE_SIZE[1], TEMPLATE_SIZE[0]), dtype=np.uint8)
+    resized = safe_resize(cropped, (symbol_width, symbol_height))
+
+    y_off = (TEMPLATE_SIZE[1] - resized.shape[0]) // 2
+    x_off = (TEMPLATE_SIZE[0] - resized.shape[1]) // 2
+
+    canvas[y_off:y_off + resized.shape[0], x_off:x_off + resized.shape[1]] = resized
+    return canvas
+
+
+def preprocess_symbol_roi(roi, use_canny=False, symbol_size=70):
     binary = preprocess_binary_from_bgr(roi, use_canny=use_canny)
-    isolated = isolate_main_symbol(binary)
+    isolated = isolate_main_symbol(binary, symbol_size=symbol_size)
+    return isolated
+
+
+def preprocess_rank_roi(roi, use_canny=False, symbol_width=75, symbol_height=70):
+    binary = preprocess_binary_from_bgr(roi, use_canny=use_canny)
+    isolated = isolate_rank_symbol(
+        binary,
+        symbol_width=symbol_width,
+        symbol_height=symbol_height
+    )
     return isolated
 
 

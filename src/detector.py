@@ -8,7 +8,7 @@ from config import (
     RANK_CONFIDENCE_THRESHOLD,
     USE_CANNY,
 )
-from src.image_utils import order_points, preprocess_symbol_roi
+from src.image_utils import order_points, preprocess_symbol_roi, preprocess_rank_roi
 from src.roi_extractor import (
     extract_corner_from_card,
     extract_rank_region,
@@ -102,7 +102,12 @@ class CardDetector:
         best_suit_template = None
 
         if rank_roi is not None:
-            processed_rank = preprocess_symbol_roi(rank_roi, use_canny=USE_CANNY)
+            processed_rank = preprocess_rank_roi(
+                rank_roi,
+                use_canny=USE_CANNY,
+                symbol_width=75,
+                symbol_height=70
+            )
             r_name, r_score, _ = match_symbol(processed_rank, self.rank_templates)
 
             if r_score >= RANK_CONFIDENCE_THRESHOLD:
@@ -113,7 +118,11 @@ class CardDetector:
                 best_rank_template = self.rank_templates[r_name]
 
         if suit_roi is not None:
-            processed_suit = preprocess_symbol_roi(suit_roi, use_canny=USE_CANNY)
+            processed_suit = preprocess_symbol_roi(
+                suit_roi,
+                use_canny=USE_CANNY,
+                symbol_size=70
+            )
             s_name, s_score, _ = match_symbol(processed_suit, self.suit_templates)
 
             if s_score >= SUIT_CONFIDENCE_THRESHOLD:

@@ -3,10 +3,15 @@ import cv2
 import numpy as np
 
 from config import TEMPLATE_SIZE
-from src.image_utils import preprocess_binary_from_bgr, isolate_main_symbol, safe_resize
+from src.image_utils import (
+    preprocess_binary_from_bgr,
+    isolate_main_symbol,
+    preprocess_rank_roi,
+    safe_resize,
+)
 
 
-def preprocess_template(path, use_canny=False):
+def preprocess_template(path, use_canny=False, template_type="suit"):
     img = cv2.imread(path)
     if img is None:
         raise FileNotFoundError(f"Template not found: {path}")
@@ -14,12 +19,20 @@ def preprocess_template(path, use_canny=False):
     if len(img.shape) == 2:
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
+    if template_type == "rank":
+        return preprocess_rank_roi(
+            img,
+            use_canny=use_canny,
+            symbol_width=75,
+            symbol_height=70
+        )
+
     binary = preprocess_binary_from_bgr(img, use_canny=use_canny)
-    isolated = isolate_main_symbol(binary)
+    isolated = isolate_main_symbol(binary, symbol_size=70)
     return isolated
 
 
-def load_templates(folder, use_canny=False):
+def load_templates(folder, use_canny=False, template_type="suit"):
     if not os.path.exists(folder):
         raise FileNotFoundError(f"Template folder not found: {folder}")
 
@@ -31,7 +44,11 @@ def load_templates(folder, use_canny=False):
 
         name = os.path.splitext(file_name)[0]
         path = os.path.join(folder, file_name)
-        templates[name] = preprocess_template(path, use_canny=use_canny)
+        templates[name] = preprocess_template(
+            path,
+            use_canny=use_canny,
+            template_type=template_type
+        )
 
     if not templates:
         raise ValueError(f"No templates loaded from: {folder}")
