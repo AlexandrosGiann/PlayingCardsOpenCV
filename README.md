@@ -24,7 +24,6 @@ This project identifies both rank and suit from a live camera stream and extends
 PlayingCardsOpenCV/
 ├── main.py
 ├── config.py
-├── char2img.py
 │
 ├── templates/
 │   ├── rank/
