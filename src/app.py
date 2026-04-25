@@ -16,21 +16,133 @@ from src.detector import CardDetector
 from src.image_utils import stack_debug_panel
 
 
-class CardDetectorApp:
+class PlayingCardsApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Playing Card Rank + Suit Detector")
+        self.root.title("Playing Cards OpenCV")
+        self.current_screen = None
+        self.show_home_screen()
+
+    def clear_screen(self):
+        if self.current_screen is not None:
+            self.current_screen.destroy()
+            self.current_screen = None
+
+    def show_home_screen(self):
+        self.clear_screen()
+        self.current_screen = HomeScreen(
+            self.root,
+            on_scanner=self.show_scanner_screen,
+            on_game=self.show_game_placeholder
+        )
+        self.current_screen.pack(fill=tk.BOTH, expand=True)
+
+    def show_scanner_screen(self):
+        self.clear_screen()
+        self.current_screen = ScannerScreen(
+            self.root,
+            on_back=self.show_home_screen
+        )
+        self.current_screen.pack(fill=tk.BOTH, expand=True)
+
+    def show_game_placeholder(self, game_name):
+        self.clear_screen()
+        self.current_screen = GamePlaceholderScreen(
+            self.root,
+            game_name=game_name,
+            on_back=self.show_home_screen
+        )
+        self.current_screen.pack(fill=tk.BOTH, expand=True)
+
+
+class HomeScreen(tk.Frame):
+    def __init__(self, parent, on_scanner, on_game):
+        super().__init__(parent)
+
+        title = tk.Label(
+            self,
+            text="Playing Cards OpenCV",
+            font=("Arial", 22, "bold")
+        )
+        title.pack(pady=30)
+
+        subtitle = tk.Label(
+            self,
+            text="Choose a mode",
+            font=("Arial", 14)
+        )
+        subtitle.pack(pady=10)
+
+        self._add_button("Scanner Only", on_scanner)
+        self._add_button("Poker", lambda: on_game("Poker"))
+        self._add_button("Blackjack", lambda: on_game("Blackjack"))
+        self._add_button("War", lambda: on_game("War"))
+
+        footer = tk.Label(
+            self,
+            text="Game logic will be added later.",
+            font=("Arial", 10)
+        )
+        footer.pack(pady=20)
+
+    def _add_button(self, text, command):
+        button = tk.Button(
+            self,
+            text=text,
+            command=command,
+            width=24,
+            height=2,
+            font=("Arial", 14)
+        )
+        button.pack(pady=8)
+
+
+class GamePlaceholderScreen(tk.Frame):
+    def __init__(self, parent, game_name, on_back):
+        super().__init__(parent)
+        self.game_name = game_name
+        self.on_back = on_back
+
+        title = tk.Label(
+            self,
+            text=f"{game_name} Mode",
+            font=("Arial", 22, "bold")
+        )
+        title.pack(pady=35)
+
+        message = tk.Label(
+            self,
+            text=f"{game_name} game logic is coming soon.",
+            font=("Arial", 14),
+            wraplength=500
+        )
+        message.pack(pady=20)
+
+        back_button = tk.Button(
+            self,
+            text="Back to Home",
+            command=self.on_back,
+            width=24,
+            height=2,
+            font=("Arial", 14)
+        )
+        back_button.pack(pady=20)
+
+
+class ScannerScreen(tk.Frame):
+    def __init__(self, parent, on_back):
+        super().__init__(parent)
+        self.on_back = on_back
 
         self.suit_templates = load_templates(
             SUIT_TEMPLATE_FOLDER,
             template_type="suit"
         )
-        
         self.rank_templates = load_templates(
             RANK_TEMPLATE_FOLDER,
             template_type="rank"
         )
-        
+
         self.detector = CardDetector(
             rank_templates=self.rank_templates,
             suit_templates=self.suit_templates
@@ -40,52 +152,65 @@ class CardDetectorApp:
         if not self.cap.isOpened():
             raise RuntimeError("Could not open camera.")
 
-        self.video_label = tk.Label(root)
+        self.video_label = tk.Label(self)
         self.video_label.pack(padx=10, pady=10)
 
         self.info_var = tk.StringVar()
         self.info_var.set("Waiting...")
         self.info_label = tk.Label(
-            root,
+            self,
             textvariable=self.info_var,
             font=("Arial", 16, "bold"),
             justify="left"
         )
         self.info_label.pack(pady=8)
 
-        self.btn_frame = tk.Frame(root)
+        self.btn_frame = tk.Frame(self)
         self.btn_frame.pack(pady=8)
 
         self.pause_button = tk.Button(
             self.btn_frame,
             text="Pause / Resume",
             command=self.toggle_pause,
-            width=18
+            width=16
         )
-        self.pause_button.pack(side=tk.LEFT, padx=6)
+        self.pause_button.pack(side=tk.LEFT, padx=4)
 
         self.snapshot_button = tk.Button(
             self.btn_frame,
             text="Save Snapshot",
             command=self.save_snapshot,
-            width=18
+            width=16
         )
-        self.snapshot_button.pack(side=tk.LEFT, padx=6)
+        self.snapshot_button.pack(side=tk.LEFT, padx=4)
 
-        self.quit_button = tk.Button(
+        self.back_button = tk.Button(
             self.btn_frame,
-            text="Exit",
-            command=self.close,
-            width=18
+            text="Back",
+            command=self.go_back,
+            width=12
         )
-        self.quit_button.pack(side=tk.LEFT, padx=6)
+        self.back_button.pack(side=tk.LEFT, padx=4)
 
         self.paused = False
         self.last_processed_frame = None
         self.last_debug = ""
+        self.running = True
 
-        self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.update_frame()
+
+    def destroy(self):
+        self.running = False
+        try:
+            if self.cap is not None:
+                self.cap.release()
+        except Exception:
+            pass
+        super().destroy()
+
+    def go_back(self):
+        self.destroy()
+        self.on_back()
 
     def toggle_pause(self):
         self.paused = not self.paused
@@ -166,6 +291,9 @@ class CardDetectorApp:
         return display
 
     def update_frame(self):
+        if not self.running:
+            return
+
         if not self.paused:
             ret, frame = self.cap.read()
 
@@ -176,7 +304,11 @@ class CardDetectorApp:
                     processed_frame, debug_text = processed
                 else:
                     processed_frame, debug_text, result, label_text = processed
-                    processed_frame = self._overlay_debug(processed_frame, result, label_text)
+                    processed_frame = self._overlay_debug(
+                        processed_frame,
+                        result,
+                        label_text
+                    )
 
                 self.last_processed_frame = processed_frame.copy()
                 self.last_debug = debug_text
@@ -194,18 +326,10 @@ class CardDetectorApp:
         else:
             self.info_var.set(f"[PAUSED] {self.last_debug}")
 
-        self.root.after(UPDATE_DELAY, self.update_frame)
-
-    def close(self):
-        try:
-            if self.cap is not None:
-                self.cap.release()
-        except Exception:
-            pass
-        self.root.destroy()
+        self.after(UPDATE_DELAY, self.update_frame)
 
 
 def run_app():
     root = tk.Tk()
-    app = CardDetectorApp(root)
+    app = PlayingCardsApp(root)
     root.mainloop()
