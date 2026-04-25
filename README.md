@@ -1,209 +1,203 @@
-# 🂡 Playing Cards Detection with OpenCV
+# 🂡 Playing Cards OpenCV
 
-Real-time playing card recognition using classical computer vision techniques.
-The system detects both rank and suit from a live camera stream.
+Real-time playing card detection and recognition using classical computer vision techniques.
+
+This project identifies both rank and suit from a live camera stream and extends into interactive card-based games such as Blackjack.
 
 ---
 
-## 📌 Overview
+## 📌 Features
 
-This project implements a modular OpenCV pipeline for detecting playing cards and recognizing:
-- Suit → spade, heart, diamond, club
-- Rank → A, K, Q, J, 2–10 (full numeric support)
-
-The application is designed to run both:
-
-- 📱 On Android via Pydroid 3
-- 💻 On Desktop (Linux / Windows)
-
-No deep learning is used — only contours, perspective transform, and template matching.
+- 🎥 Real-time card detection via camera
+- 🂠 Rank recognition (A, K, Q, J, 2–10)
+- ♥ Suit recognition (spade, heart, diamond, club)
+- 🧠 Pure OpenCV pipeline (no machine learning)
+- 🧩 Modular architecture (detector, GUI, templates, games)
+- 🎮 Early-stage game integration (Blackjack prototype)
 
 ---
 
 ## 🧱 Project Structure
 
+📁 Project Structure
 ```
 PlayingCardsOpenCV/
-│
-├── main.py                  # Entry point (Pydroid-compatible)
-├── config.py                # Global configuration & thresholds
-├── char2img.py              # Utility script (optional: generate templates)
+├── main.py
+├── config.py
+├── char2img.py
 │
 ├── templates/
-│   ├── rank/                # Rank templates (JPG)
-│   │   ├── A.jpg
-│   │   ├── K.jpg
-│   │   ├── Q.jpg
-│   │   ├── J.jpg
-│   │   ├── 2.jpg ... 10.jpg
-│   │
-│   └── suit/                # Suit templates (JPG)
-│       ├── spade.jpg
-│       ├── heart.jpg
-│       ├── diamond.jpg
-│       └── club.jpg
+│   ├── rank/
+│   └── suit/
 │
-└── src/
-    ├── __init__.py
-    │
-    ├── app.py               # Tkinter GUI + camera loop
-    │
-    ├── detector.py          # Core detection pipeline
-    │   ├── contour detection
-    │   ├── perspective transform
-    │   └── rank/suit classification
-    │
-    ├── image_utils.py       # Image processing
-    │   ├── preprocessing (threshold / canny)
-    │   ├── isolate_main_symbol()
-    │   └── isolate_rank_symbol()  # multi-contour support (e.g. "10")
-    │
-    ├── roi_extractor.py     # Region extraction
-    │   ├── card corner extraction
-    │   ├── rank ROI
-    │   └── suit ROI
-    │
-    └── template_matcher.py  # Template handling
-        ├── load_templates()
-        ├── preprocess_template()
-        └── match_symbol()
+├── src/
+│   ├── __init__.py
+│   ├── app.py
+│   ├── detector.py
+│   ├── roi_extractor.py
+│   ├── template_matcher.py
+│   ├── image_utils.py
+│   │
+│   ├── games/
+│   │   └── blackjack.py
+│   │
+│   └── ui/
+│       └── scrollable.py
+│
+├── snapshot_frame.jpg
+├── README.md
+└── .gitignore
 ```
-Note:
-Rank preprocessing differs from suit preprocessing.
-
-Ranks support multi-contour symbols (e.g. "10") by merging all valid contours
-into a single bounding region before template matching.
 ---
 
 ## ⚙️ Configuration
 
-All runtime parameters are centralized in:
+All parameters are defined in:
 
 config.py
 
-Key parameters:
+Example:
 
 CAMERA_INDEX = 0
-THRESH_BINARY_VALUE = 170
+THRESH_BINARY_VALUE = 150
 USE_CANNY = False
 
-RANK_CONFIDENCE_THRESHOLD = 0.45
-SUIT_CONFIDENCE_THRESHOLD = 0.45
+RANK_CONFIDENCE_THRESHOLD = 0.6
+SUIT_CONFIDENCE_THRESHOLD = 0.6
 
 MIN_CARD_AREA = 12000
 POLY_EPSILON_RATIO = 0.02
 
-These control:
-
-- detection sensitivity
-- binarization behavior
-- template matching thresholds
+These control detection accuracy, filtering, and performance.
 
 ---
 
-## 🧠 Detection Pipeline
+## 🧠 How It Works
 
-1. Contour Detection
+1. Card Detection
 
-- Canny edge detection
-- External contours
-- Filter quadrilaterals by area
+- Edge detection (Canny)
+- Contour extraction
+- Quadrilateral filtering
 
 2. Perspective Transform
 
-- Warp detected card to top-down view
+- Warp card into top-down view
 
-3. Corner Extraction
+3. Region Extraction
 
-- Extract top-left region
-- Split into:
-  - rank ROI
-  - suit ROI
+- Extract top-left corner
+- Separate:
+  - Rank region
+  - Suit region
 
 4. Preprocessing
 
 - Grayscale
-- Threshold or edge detection
-- Largest contour isolation
+- Thresholding
+- Contour isolation
 
 5. Template Matching
 
 - Resize to fixed size
-- Pixel-wise difference
-- Similarity score (0–1)
+- Compare with templates
+- Output similarity score
+
+---
+
+## 🔢 Special Case: Rank "10"
+
+Unlike single-character ranks, "10" consists of two symbols.
+
+The system handles this by:
+
+- Detecting multiple contours
+- Merging them into a single bounding box
+- Matching against a combined template
 
 ---
 
 ## 🖼️ Template Requirements
 
-All templates are JPG images.
+All templates must be:
 
-Constraints:
-
+- JPG format
 - High contrast (black on white)
-- Same font/style as cards
-- Centered symbol
-- Minimal background noise
+- Same font as cards
+- Centered
+- Clean (minimal noise)
 
 ---
 
-## 🧪 Testing Environments
-Tested on 📱 Redmi Note 11 (Android 12, MIUI 13, Pydroid 3 Premium)
+## 🧪 Testing Environment
+
+Tested on:
+
+- 📱 Redmi Note 11 (Pydroid 3 Premium)
+
 ---
 
-## 🧪 Debug Output
+## 🎮 Game Mode (Work in Progress)
 
-The application provides a debug panel:
+The app now includes a Game Selection Menu:
 
-[Detected Rank]   [Best Rank Template]
-[Detected Suit]   [Best Suit Template]
+- Scanner Only
+- Blackjack
+- Poker (planned)
+- War (planned)
 
-And console/UI output:
+Blackjack (Current State)
 
-K of heart | Rank: 0.80 Suit: 0.87
+- Card detection integrated
+- Manual assignment:
+  - Add card to Player
+  - Add card to Dealer
+- Score calculation
+- Win / Lose detection
+- Basic suggestions (Hit / Stand)
+
+⚠️ Still under development.
 
 ---
 
 ## ⚠️ Limitations
 
-- Detects only the largest card
-- Sensitive to:
-  - lighting conditions
-  - extreme rotations
-  - template mismatch
-- Rank detection less stable than suit detection
+- Detects only one card at a time
+- Sensitive to lighting conditions
+- Template-dependent accuracy
+- Rank detection is harder than suit detection
 
 ---
 
 ## 🔧 Troubleshooting
 
-Camera not opening
+Camera not working
 
 Could not open camera
 
-➡ Change in "config.py":
+➡ Try:
 
 CAMERA_INDEX = 1
 
 ---
 
-## Wrong detections
+Wrong detections
 
 - Adjust threshold:
 
-THRESH_BINARY_VALUE = 150–180
+THRESH_BINARY_VALUE = 140–180
 
-- Improve templates (font match is critical)
+- Improve templates (VERY important)
 
 ---
 
-## 🔮 Future Work
+## 🔮 Future Improvements
 
 - Multi-card detection
-- Improve multi-character rank detection (e.g. "10")
-- Temporal smoothing
+- Better rotation handling
+- Automatic game flow (no manual input)
 - Performance optimization (mobile)
-- Hybrid ML + CV approach
+- Optional ML-based classifier
 
 ---
 

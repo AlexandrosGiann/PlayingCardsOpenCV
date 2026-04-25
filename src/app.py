@@ -1,4 +1,5 @@
 #Pydroid run tkinter
+
 import cv2
 import tkinter as tk
 from PIL import Image, ImageTk
@@ -14,13 +15,61 @@ from config import (
 from src.template_matcher import load_templates
 from src.detector import CardDetector
 from src.image_utils import stack_debug_panel
+from src.games.blackjack import BlackjackGame
+
+
+class HorizontalScrollableFrame(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.canvas = tk.Canvas(self)
+        self.scrollbar = tk.Scrollbar(
+            self,
+            orient="horizontal",
+            command=self.canvas.xview
+        )
+
+        self.inner = tk.Frame(self.canvas)
+
+        self.canvas.create_window(
+            (0, 0),
+            window=self.inner,
+            anchor="nw"
+        )
+
+        self.inner.bind(
+            "<Configure>",
+            lambda event: self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")
+            )
+        )
+
+        self.canvas.configure(xscrollcommand=self.scrollbar.set)
+
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+
+        self.canvas.bind("<ButtonPress-1>", self._start_scroll)
+        self.canvas.bind("<B1-Motion>", self._scroll)
+
+    def _start_scroll(self, event):
+        self.canvas.scan_mark(event.x, event.y)
+
+    def _scroll(self, event):
+        self.canvas.scan_dragto(event.x, event.y, gain=1)
 
 
 class PlayingCardsApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Playing Cards OpenCV")
+
+        self.scroll_root = HorizontalScrollableFrame(root)
+        self.scroll_root.pack(fill=tk.BOTH, expand=True)
+
+        self.container = self.scroll_root.inner
         self.current_screen = None
+
         self.show_home_screen()
 
     def clear_screen(self):
@@ -31,27 +80,35 @@ class PlayingCardsApp:
     def show_home_screen(self):
         self.clear_screen()
         self.current_screen = HomeScreen(
-            self.root,
+            self.container,
             on_scanner=self.show_scanner_screen,
-            on_game=self.show_game_placeholder
+            on_game=self.show_game_screen
         )
         self.current_screen.pack(fill=tk.BOTH, expand=True)
 
     def show_scanner_screen(self):
         self.clear_screen()
         self.current_screen = ScannerScreen(
-            self.root,
+            self.container,
             on_back=self.show_home_screen
         )
         self.current_screen.pack(fill=tk.BOTH, expand=True)
 
-    def show_game_placeholder(self, game_name):
+    def show_game_screen(self, game_name):
         self.clear_screen()
-        self.current_screen = GamePlaceholderScreen(
-            self.root,
-            game_name=game_name,
-            on_back=self.show_home_screen
-        )
+
+        if game_name == "Blackjack":
+            self.current_screen = BlackjackScreen(
+                self.container,
+                on_back=self.show_home_screen
+            )
+        else:
+            self.current_screen = GamePlaceholderScreen(
+                self.container,
+                game_name=game_name,
+                on_back=self.show_home_screen
+            )
+
         self.current_screen.pack(fill=tk.BOTH, expand=True)
 
 
@@ -80,7 +137,7 @@ class HomeScreen(tk.Frame):
 
         footer = tk.Label(
             self,
-            text="Game logic will be added later.",
+            text="Game logic will be added gradually.",
             font=("Arial", 10)
         )
         footer.pack(pady=20)
@@ -100,8 +157,6 @@ class HomeScreen(tk.Frame):
 class GamePlaceholderScreen(tk.Frame):
     def __init__(self, parent, game_name, on_back):
         super().__init__(parent)
-        self.game_name = game_name
-        self.on_back = on_back
 
         title = tk.Label(
             self,
@@ -121,7 +176,7 @@ class GamePlaceholderScreen(tk.Frame):
         back_button = tk.Button(
             self,
             text="Back to Home",
-            command=self.on_back,
+            command=on_back,
             width=24,
             height=2,
             font=("Arial", 14)
@@ -157,6 +212,7 @@ class ScannerScreen(tk.Frame):
 
         self.info_var = tk.StringVar()
         self.info_var.set("Waiting...")
+
         self.info_label = tk.Label(
             self,
             textvariable=self.info_var,
@@ -193,23 +249,34 @@ class ScannerScreen(tk.Frame):
         self.back_button.pack(side=tk.LEFT, padx=4)
 
         self.paused = False
-        self.last_processed_frame = None
-        self.last_debug = ""
         self.running = True
+        self.last_processed_frame = None
+        self.last_debug = "Waiting..."
 
         self.update_frame()
 
     def destroy(self):
         self.running = False
+
         try:
             if self.cap is not None:
                 self.cap.release()
+                self.cap = None
         except Exception:
             pass
+
         super().destroy()
 
     def go_back(self):
-        self.destroy()
+        self.running = False
+
+        try:
+            if self.cap is not None:
+                self.cap.release()
+                self.cap = None
+        except Exception:
+            pass
+
         self.on_back()
 
     def toggle_pause(self):
@@ -294,42 +361,176 @@ class ScannerScreen(tk.Frame):
         if not self.running:
             return
 
-        if not self.paused:
-            ret, frame = self.cap.read()
-
-            if ret:
-                processed = self.detector.process_frame(frame)
-
-                if len(processed) == 2:
-                    processed_frame, debug_text = processed
-                else:
-                    processed_frame, debug_text, result, label_text = processed
-                    processed_frame = self._overlay_debug(
-                        processed_frame,
-                        result,
-                        label_text
-                    )
-
-                self.last_processed_frame = processed_frame.copy()
-                self.last_debug = debug_text
-                self.info_var.set(debug_text)
-
-                rgb = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB)
-                img = Image.fromarray(rgb)
-                img.thumbnail((WINDOW_WIDTH, WINDOW_HEIGHT))
-
-                imgtk = ImageTk.PhotoImage(image=img)
-                self.video_label.imgtk = imgtk
-                self.video_label.configure(image=imgtk)
-            else:
-                self.info_var.set("Camera read error.")
-        else:
+        if self.paused:
             self.info_var.set(f"[PAUSED] {self.last_debug}")
+            self.after(UPDATE_DELAY, self.update_frame)
+            return
+
+        ret, frame = self.cap.read()
+
+        if ret:
+            processed = self.detector.process_frame(frame)
+
+            if len(processed) == 2:
+                processed_frame, debug_text = processed
+            else:
+                processed_frame, debug_text, result, label_text = processed
+                processed_frame = self._overlay_debug(
+                    processed_frame,
+                    result,
+                    label_text
+                )
+
+            self.last_processed_frame = processed_frame.copy()
+            self.last_debug = debug_text
+            self.info_var.set(debug_text)
+
+            rgb = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(rgb)
+            img.thumbnail((WINDOW_WIDTH, WINDOW_HEIGHT))
+
+            imgtk = ImageTk.PhotoImage(image=img)
+            self.video_label.imgtk = imgtk
+            self.video_label.configure(image=imgtk)
+        else:
+            self.info_var.set("Camera read error.")
+
+        self.after(UPDATE_DELAY, self.update_frame)
+
+
+class BlackjackScreen(ScannerScreen):
+    def __init__(self, parent, on_back):
+        self.game = BlackjackGame()
+        self.current_rank = "unknown"
+        self.current_suit = "unknown"
+
+        self.game_var = tk.StringVar()
+        self.game_var.set("Initializing blackjack...")
+
+        super().__init__(parent, on_back)
+
+        self.info_label.config(font=("Arial", 13, "bold"))
+
+        self.blackjack_frame = tk.Frame(self)
+        self.blackjack_frame.pack(pady=8)
+
+        self.player_button = tk.Button(
+            self.blackjack_frame,
+            text="Add to Player",
+            command=self.add_to_player,
+            width=16
+        )
+        self.player_button.pack(side=tk.LEFT, padx=4)
+
+        self.dealer_button = tk.Button(
+            self.blackjack_frame,
+            text="Add to Dealer",
+            command=self.add_to_dealer,
+            width=16
+        )
+        self.dealer_button.pack(side=tk.LEFT, padx=4)
+
+        self.reset_button = tk.Button(
+            self.blackjack_frame,
+            text="Reset Game",
+            command=self.reset_game,
+            width=16
+        )
+        self.reset_button.pack(side=tk.LEFT, padx=4)
+
+        self.game_label = tk.Label(
+            self,
+            textvariable=self.game_var,
+            font=("Arial", 13),
+            justify="left"
+        )
+        self.game_label.pack(pady=8)
+
+        self.game_var.set(self.game_text())
+
+    def add_to_player(self):
+        self.game.add_player_card(self.current_rank)
+        self.game_var.set(self.game_text())
+
+    def add_to_dealer(self):
+        self.game.add_dealer_card(self.current_rank)
+        self.game_var.set(self.game_text())
+
+    def reset_game(self):
+        self.game.reset()
+        self.game_var.set(self.game_text())
+
+    def game_text(self):
+        result = self.game.result()
+        suggestion = self.game.suggestion()
+
+        text = (
+            f"PLAYER: {self.game.player.display()} = "
+            f"{self.game.player.value()}\n"
+            f"DEALER: {self.game.dealer.display()} = "
+            f"{self.game.dealer.value()}\n\n"
+            f"RESULT: {result}"
+        )
+
+        if suggestion:
+            text += f"\n{suggestion}"
+
+        return text
+
+    def update_frame(self):
+        if not self.running:
+            return
+
+        if self.paused:
+            self.info_var.set(f"[PAUSED] {self.last_debug}")
+            self.after(UPDATE_DELAY, self.update_frame)
+            return
+
+        ret, frame = self.cap.read()
+
+        if ret:
+            processed = self.detector.process_frame(frame)
+
+            if len(processed) == 2:
+                processed_frame, debug_text = processed
+                self.current_rank = "unknown"
+                self.current_suit = "unknown"
+            else:
+                processed_frame, debug_text, result, label_text = processed
+
+                self.current_rank = result["rank_name"]
+                self.current_suit = result["suit_name"]
+
+                processed_frame = self._overlay_debug(
+                    processed_frame,
+                    result,
+                    label_text
+                )
+
+            self.last_processed_frame = processed_frame.copy()
+            self.last_debug = debug_text
+
+            self.info_var.set(
+                f"Detected: {self.current_rank} of {self.current_suit}"
+            )
+
+            if hasattr(self, "game_var"):
+                self.game_var.set(self.game_text())
+
+            rgb = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(rgb)
+            img.thumbnail((WINDOW_WIDTH, WINDOW_HEIGHT))
+
+            imgtk = ImageTk.PhotoImage(image=img)
+            self.video_label.imgtk = imgtk
+            self.video_label.configure(image=imgtk)
+        else:
+            self.info_var.set("Camera read error.")
 
         self.after(UPDATE_DELAY, self.update_frame)
 
 
 def run_app():
     root = tk.Tk()
-    app = PlayingCardsApp(root)
+    PlayingCardsApp(root)
     root.mainloop()
