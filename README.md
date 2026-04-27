@@ -18,32 +18,40 @@ This project identifies both rank and suit from a live camera stream and extends
 ---
 
 ## 🧱 Project Structure
-
-📁 Project Structure
 ```
 PlayingCardsOpenCV/
-├── main.py
-├── config.py
+├── main.py                  # Entry point (runs the application)
+├── config.py                # Global configuration & tuning parameters
 │
-├── templates/
-│   ├── rank/
-│   └── suit/
+├── templates/               # Template images used for matching
+│   ├── rank/                # Card ranks (A, 2–10, J, Q, K)
+│   └── suit/                # Card suits (club, diamond, heart, spade)
 │
 ├── src/
 │   ├── __init__.py
-│   ├── app.py
-│   ├── detector.py
-│   ├── roi_extractor.py
-│   ├── template_matcher.py
-│   ├── image_utils.py
 │   │
-│   ├── games/
-│   │   └── blackjack.py
+│   ├── app.py               # Main GUI, navigation & camera integration
 │   │
-│   └── ui/
-│       └── scrollable.py
+│   ├── detector.py          # Card detection (OpenCV pipeline)
+│   ├── roi_extractor.py     # Extract rank & suit regions
+│   ├── template_matcher.py  # Template matching logic
+│   ├── image_utils.py       # Image preprocessing utilities
+│   │
+│   ├── core/                # Core card engine (game-independent)
+│   │   ├── __init__.py
+│   │   ├── card.py          # Card model (rank, suit)
+│   │   ├── deck.py          # Deck logic (shuffle, draw)
+│   │   └── poker_hand.py    # Poker hand evaluation
+│   │
+│   ├── games/               # Game logic
+│   │   ├── blackjack.py     # Blackjack implementation
+│   │   └── five_card_draw.py# Simple poker (5-card draw)
+│   │
+│   └── ui/                  # Reusable UI components
+│       ├── __init__.py
+│       └── scrollable.py    # Scrollable frames (Tkinter)
 │
-├── snapshot_frame.jpg
+├── snapshot_frame.jpg       # Example output snapshot
 ├── README.md
 └── .gitignore
 ```
