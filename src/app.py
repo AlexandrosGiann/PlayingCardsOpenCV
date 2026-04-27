@@ -12,6 +12,7 @@ from config import (
     WINDOW_HEIGHT,
     UPDATE_DELAY,
 )
+from src.games.five_card_draw import FiveCardDrawGame
 from src.template_matcher import load_templates
 from src.detector import CardDetector
 from src.image_utils import stack_debug_panel
@@ -99,6 +100,12 @@ class PlayingCardsApp:
 
         if game_name == "Blackjack":
             self.current_screen = BlackjackScreen(
+                self.container,
+                on_back=self.show_home_screen
+            )
+        
+        elif game_name == "Poker":
+                self.current_screen = PokerScreen(
                 self.container,
                 on_back=self.show_home_screen
             )
@@ -529,6 +536,53 @@ class BlackjackScreen(ScannerScreen):
 
         self.after(UPDATE_DELAY, self.update_frame)
 
+
+class PokerScreen(tk.Frame):
+    def __init__(self, parent, on_back):
+        super().__init__(parent)
+
+        self.game = FiveCardDrawGame()
+
+        title = tk.Label(
+            self,
+            text="Poker (5-Card Draw)",
+            font=("Arial", 18, "bold")
+        )
+        title.pack(pady=20)
+
+        self.result_var = tk.StringVar()
+        self.result_var.set("Press Deal")
+
+        self.result_label = tk.Label(
+            self,
+            textvariable=self.result_var,
+            font=("Arial", 12),
+            justify="left"
+        )
+        self.result_label.pack(pady=10)
+
+        btn_frame = tk.Frame(self)
+        btn_frame.pack(pady=10)
+
+        deal_btn = tk.Button(
+            btn_frame,
+            text="Deal Cards",
+            command=self.deal_cards,
+            width=18
+        )
+        deal_btn.pack(side=tk.LEFT, padx=5)
+
+        back_btn = tk.Button(
+            btn_frame,
+            text="Back",
+            command=on_back,
+            width=12
+        )
+        back_btn.pack(side=tk.LEFT, padx=5)
+
+    def deal_cards(self):
+        self.game.start_new_game()
+        self.result_var.set(self.game.get_result_text())
 
 def run_app():
     root = tk.Tk()
