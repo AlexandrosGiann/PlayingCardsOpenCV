@@ -43,18 +43,39 @@ PlayingCardsOpenCV/
 │   │   ├── deck.py          # Deck logic (shuffle, draw)
 │   │   └── poker_hand.py    # Poker hand evaluation
 │   │
-│   ├── games/               # Game logic
-│   │   ├── blackjack.py     # Blackjack implementation
-│   │   └── five_card_draw.py# Simple poker (5-card draw)
+│   ├── games/               # Game logic implementations
+│   │   ├── blackjack.py
+│   │   ├── five_card_draw.py
+│   │   └── war.py
 │   │
 │   └── ui/                  # Reusable UI components
 │       ├── __init__.py
-│       └── scrollable.py    # Scrollable frames (Tkinter)
+│       └── scrollable.py
 │
 ├── snapshot_frame.jpg       # Example output snapshot
 ├── README.md
 └── .gitignore
 ```
+---
+
+### 🧠 Architecture Overview
+
+The project is organized into four main layers:
+
+- **Computer Vision Layer**
+  - Detects cards and extracts rank/suit regions
+
+- **Core Engine**
+  - Defines cards, deck behavior, and hand evaluation logic
+
+- **Game Layer**
+  - Implements game rules (Blackjack, Poker, War)
+
+- **UI Layer**
+  - Handles user interface and interaction (Tkinter)
+
+This modular structure makes it easy to extend the system with new games or improved detection methods.
+
 ---
 
 ## ⚙️ Configuration
