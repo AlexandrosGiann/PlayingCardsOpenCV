@@ -12,11 +12,13 @@ from config import (
     WINDOW_HEIGHT,
     UPDATE_DELAY,
 )
-from src.games.five_card_draw import FiveCardDrawGame
+
 from src.template_matcher import load_templates
 from src.detector import CardDetector
 from src.image_utils import stack_debug_panel
 from src.games.blackjack import BlackjackGame
+from src.games.five_card_draw import FiveCardDrawGame
+from src.games.war import WarGame
 
 
 class HorizontalScrollableFrame(tk.Frame):
@@ -109,6 +111,11 @@ class PlayingCardsApp:
                 self.container,
                 on_back=self.show_home_screen
             )
+        elif game_name == "War":
+            self.current_screen = WarScreen(
+        self.container,
+        on_back=self.show_home_screen
+    )
         else:
             self.current_screen = GamePlaceholderScreen(
                 self.container,
@@ -583,6 +590,62 @@ class PokerScreen(tk.Frame):
     def deal_cards(self):
         self.game.start_new_game()
         self.result_var.set(self.game.get_result_text())
+
+class WarScreen(tk.Frame):
+    def __init__(self, parent, on_back):
+        super().__init__(parent)
+
+        self.game = WarGame()
+
+        tk.Label(
+            self,
+            text="WAR",
+            font=("Arial", 20, "bold")
+        ).pack(pady=20)
+
+        self.status_var = tk.StringVar()
+        self.status_var.set("Press Start")
+
+        tk.Label(
+            self,
+            textvariable=self.status_var,
+            font=("Arial", 12)
+        ).pack(pady=10)
+
+        btn_frame = tk.Frame(self)
+        btn_frame.pack(pady=10)
+
+        tk.Button(
+            btn_frame,
+            text="Start Game",
+            command=self.start,
+            width=14
+        ).pack(side=tk.LEFT, padx=5)
+
+        tk.Button(
+            btn_frame,
+            text="Play Round",
+            command=self.play,
+            width=14
+        ).pack(side=tk.LEFT, padx=5)
+
+        tk.Button(
+            btn_frame,
+            text="Back",
+            command=on_back,
+            width=10
+        ).pack(side=tk.LEFT, padx=5)
+
+    def start(self):
+        self.game.start_game()
+        self.update_ui()
+
+    def play(self):
+        self.game.play_round()
+        self.update_ui()
+
+    def update_ui(self):
+        self.status_var.set(self.game.status())
 
 def run_app():
     root = tk.Tk()
